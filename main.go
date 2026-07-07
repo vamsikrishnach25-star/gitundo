@@ -32,6 +32,28 @@ func confirmAction(prompt string) bool {
 	return false
 }
 
+// Pure functions: given inputs, return the git command args.
+// Kept separate from execution so they're easy to test.
+func lastCommitArgs() []string {
+	return []string{"reset", "--hard", "HEAD~1"}
+}
+
+func fileArgs(filename string) []string {
+	return []string{"checkout", "--", filename}
+}
+
+func unstageArgs(filename string) []string {
+	return []string{"reset", "HEAD", filename}
+}
+
+func revertArgs(hash string) []string {
+	return []string{"revert", hash}
+}
+
+func logArgs() []string {
+	return []string{"log", "--oneline", "-n", "10"}
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "gitundo",
@@ -44,7 +66,7 @@ func main() {
 		Short: "Undo the last commit",
 		Run: func(cmd *cobra.Command, args []string) {
 			if confirmAction("This will delete the last commit! Are you sure?") {
-				runGitCommand("reset", "--hard", "HEAD~1")
+				runGitCommand(lastCommitArgs()...)
 			} else {
 				color.Yellow("Aborted.")
 			}
@@ -57,7 +79,7 @@ func main() {
 		Short: "Undo changes to a file",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			runGitCommand("checkout", "--", args[0])
+			runGitCommand(fileArgs(args[0])...)
 		},
 	}
 
@@ -67,7 +89,7 @@ func main() {
 		Short: "Unstage a file",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			runGitCommand("reset", "HEAD", args[0])
+			runGitCommand(unstageArgs(args[0])...)
 		},
 	}
 
@@ -78,7 +100,7 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if confirmAction("This will create a new commit reverting the changes. Proceed?") {
-				runGitCommand("git", "revert", args[0])
+				runGitCommand(revertArgs(args[0])...)
 			} else {
 				color.Yellow("Aborted.")
 			}
@@ -90,12 +112,11 @@ func main() {
 		Use:   "log",
 		Short: "Show recent commits",
 		Run: func(cmd *cobra.Command, args []string) {
-			runGitCommand("log", "--oneline", "-n", "10")
+			runGitCommand(logArgs()...)
 		},
 	}
 
 	// Register commands
 	rootCmd.AddCommand(undoLastCmd, undoFileCmd, undoStagedCmd, revertCmd, showCommitsCmd)
-
 	rootCmd.Execute()
 }
